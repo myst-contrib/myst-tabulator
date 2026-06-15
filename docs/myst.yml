@@ -1,4 +1,6 @@
 version: 1
+extends:
+  - https://raw.githubusercontent.com/myst-contrib/myst-contrib.github.io/main/docs/footer.yml
 project:
   id: myst-tabulator
   title: myst-tabulator
