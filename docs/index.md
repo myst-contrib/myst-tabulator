@@ -9,7 +9,7 @@ Add the plugin to your `myst.yml`:
 ```yaml
 project:
   plugins:
-    - https://raw.githubusercontent.com/choldgraf/myst-tabulator/main/src/tabulator.mjs
+    - https://raw.githubusercontent.com/myst-contrib/myst-tabulator/main/src/tabulator.mjs
 ```
 
 Add the directive once per page and it will enhance **all HTML tables in the content section of the page**:

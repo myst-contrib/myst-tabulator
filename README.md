@@ -9,7 +9,7 @@ Add to your `myst.yml`:
 ```yaml
 project:
   plugins:
-    - https://raw.githubusercontent.com/choldgraf/myst-tabulator/main/src/tabulator.mjs
+    - https://raw.githubusercontent.com/myst-contrib/myst-tabulator/main/src/tabulator.mjs
 ```
 
 ## Usage
