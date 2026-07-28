@@ -194,6 +194,22 @@ The numeric stats (`sum`, `avg`, `min`, `max`) understand currency and percent f
 :::
 ::::
 
+## Themes
+
+Pick one of Tabulator's stylesheets with `:theme:`.
+The theme applies to **every table on the page**.
+For example, try `materialize` for a minimal look without visible table borders.
+
+```
+:::{tabulator}
+:theme: materialize
+:::
+```
+
+Available themes: `default`, `simple` (the default here), `midnight`, `modern`, `site`, `site_dark`, `bootstrap3`, `bootstrap4`, `bootstrap5`, `bulma`, `materialize`, `semanticui`.
+The **Themes** section in the sidebar has a live demo of each, and the [Tabulator themes documentation](https://www.tabulator.info/docs/6.x/theme/) describes them.
+When the site is in dark mode, the plugin inverts the light themes' colors so tables stay readable (this is hacky but seems to work well-enough!).
+
 ## Raw Tabulator options
 
 Pass any other Tabulator constructor option through `:tabulator-options:` as a one-line JSON string.
@@ -216,6 +232,7 @@ Pass any other Tabulator constructor option through `:tabulator-options:` as a o
 | `:search:` | flag | Show a single search input above the table; filters across all columns. Synced to `?tablesearch=`. |
 | `:copy:` | flag | Show a "Copy" button in the table footer. |
 | `:summary: <stat>` | string | Bottom-row calc per column: `sum`, `avg`, `min`, `max`, `count`, `concat`. |
+| `:theme: <name>` | string | Tabulator stylesheet for the whole page (one theme per page). Default: `simple`. |
 | `:layout: <mode>` | string | Tabulator layout (`fitColumns`, `fitData`, `fitDataFill`, …). |
 | `:no-sort:` | flag | Disable click-to-sort on headers. |
 | `:tabulator-options:` | JSON string | Merged into the Tabulator constructor (last-write-wins). |

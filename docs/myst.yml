@@ -10,6 +10,9 @@ project:
   toc:
     - file: index.md
     - file: jupyter.md
+    - title: Themes
+      children:
+        - pattern: themes/*.md
 
 site:
   template: book-theme

@@ -1,0 +1,9 @@
+% Simple table to show off tabulator themes
+| Package | Language | Description |
+|---------|----------|-------------|
+| pandas | Python | Data analysis and manipulation |
+| NumPy | Python | Numerical computing |
+| SciPy | Python | Scientific computing |
+| Matplotlib | Python | Plotting |
+| scikit-learn | Python | Machine learning |
+| Polars | Rust/Python | Fast dataframes |

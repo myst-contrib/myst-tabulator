@@ -11,8 +11,18 @@ try { pathMod = await import('node:path'); } catch {}
 const PLUGIN_PATH = new URL(import.meta.url).pathname;
 
 const TABULATOR_VERSION = '6.3.1';
-const TABULATOR_CSS_URL = `https://cdn.jsdelivr.net/npm/tabulator-tables@${TABULATOR_VERSION}/dist/css/tabulator_simple.min.css`;
 const TABULATOR_ESM_URL = `https://cdn.jsdelivr.net/npm/tabulator-tables@${TABULATOR_VERSION}/+esm`;
+
+// Stylesheets Tabulator ships in dist/css. "default" is the stock
+// tabulator.min.css; every other name maps to tabulator_<name>.min.css.
+const TABULATOR_THEMES = [
+  'default', 'simple', 'midnight', 'modern', 'site', 'site_dark',
+  'bootstrap3', 'bootstrap4', 'bootstrap5', 'bulma', 'materialize', 'semanticui',
+];
+function themeCssUrl(theme) {
+  const file = theme === 'default' ? 'tabulator' : `tabulator_${theme || 'simple'}`;
+  return `https://cdn.jsdelivr.net/npm/tabulator-tables@${TABULATOR_VERSION}/dist/css/${file}.min.css`;
+}
 
 // Default scope: article content only, so theme chrome isn't enhanced.
 const DEFAULT_INCLUDE = 'article.article table, main table';
@@ -111,9 +121,9 @@ function smartSort(a, b, aRow, bRow, column, dir) {
   return String(a).localeCompare(String(b));
 }
 
-// This enforces some visual styles so that the theme doesn't clobber them
-// Mostly this is over-riding defaults in the myst-theme's tailwind.
-const FILTER_INPUT_CSS = `
+// Plugin-injected styles: fixes for the myst-theme's tailwind resets,
+// our toolbar, and dark-mode overrides for Tabulator's light-only CSS.
+const PLUGIN_CSS = `
   /* Header-filter inputs lose their borders/background under Tailwind resets. */
   .tabulator .tabulator-header-filter input,
   .tabulator .tabulator-header-filter select {
@@ -154,47 +164,25 @@ const FILTER_INPUT_CSS = `
   /* Wider padding + pointer cursor to read as a clickable button. */
   .myst-tab-copy { padding: 0.3rem 0.7rem; cursor: pointer; }
 
-  /* Dark mode: the theme toggles a "dark" class on <html>, but Tabulator's
-     simple theme is light-only. Make its surfaces transparent so the page
-     background shows through, and use translucent white overlays for
-     stripes/hover so this works on any dark background. */
-  html.dark .tabulator,
-  html.dark .tabulator .tabulator-header,
-  html.dark .tabulator .tabulator-header .tabulator-col,
-  html.dark .tabulator .tabulator-tableholder .tabulator-table,
-  html.dark .tabulator .tabulator-footer,
-  html.dark .tabulator .tabulator-footer .tabulator-paginator,
-  html.dark .tabulator-row,
-  html.dark .tabulator-row.tabulator-row-even {
-    background-color: transparent;
-    color: inherit;
+  /* Dark mode: the site theme toggles a "dark" class on <html>, but
+     Tabulator's stock themes are light-only. Rather than restyling every
+     theme's surfaces, invert them wholesale — hue-rotate keeps accent
+     colors close to their light-mode hues. Natively dark themes opt out
+     via the data-tabulator-dark-theme attribute set in render(). Images
+     inside cells are counter-inverted back to normal. */
+  html.dark:not([data-tabulator-dark-theme]) .tabulator,
+  html.dark:not([data-tabulator-dark-theme]) .myst-tab-toolbar {
+    filter: invert(1) hue-rotate(180deg);
   }
-  html.dark .tabulator .tabulator-header,
-  html.dark .tabulator .tabulator-header .tabulator-col,
-  html.dark .tabulator .tabulator-footer,
-  html.dark .tabulator-row,
-  html.dark .tabulator-row .tabulator-cell {
-    border-color: #4b5563;
+  /* Normalize colors before inverting: themes that inherit text color from
+     the page would otherwise pick up the site's light-on-dark text and end
+     up dark-on-dark after the inversion. */
+  html.dark:not([data-tabulator-dark-theme]) .tabulator {
+    color: #111;
+    background: #fff;
   }
-  /* Calc (summary) rows use background:!important upstream, so match it. */
-  html.dark .tabulator .tabulator-tableholder .tabulator-table .tabulator-row.tabulator-calcs,
-  html.dark .tabulator .tabulator-footer .tabulator-calcs-holder,
-  html.dark .tabulator .tabulator-footer .tabulator-calcs-holder .tabulator-row {
-    background: rgba(255, 255, 255, 0.06) !important;
-  }
-  html.dark .tabulator-row.tabulator-selectable:hover,
-  html.dark .tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  html.dark .tabulator .tabulator-header-filter input,
-  html.dark .tabulator .tabulator-header-filter select,
-  html.dark .myst-tab-search,
-  html.dark .myst-tab-copy,
-  html.dark .tabulator .tabulator-footer .tabulator-page,
-  html.dark .tabulator .tabulator-footer .tabulator-page-size {
-    background: rgba(255, 255, 255, 0.08);
-    color: inherit;
-    border-color: #6b7280;
+  html.dark:not([data-tabulator-dark-theme]) .tabulator img {
+    filter: invert(1) hue-rotate(180deg);
   }
 `;
 
@@ -224,17 +212,36 @@ async function render({ model, el }) {
 
   // Tabulator runs on light-DOM tables, so the stylesheet has to live in
   // document.head — the anywidget's shadow CSS doesn't reach them.
-  if (!document.querySelector('link[data-myst-tabulator]')) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = TABULATOR_CSS_URL;
-    link.dataset.mystTabulator = '1';
-    document.head.appendChild(link);
+  // One theme stylesheet for the whole document. Always sync its href: the
+  // MyST site is a SPA, so navigating between pages re-renders widgets without
+  // a full reload, and the link must follow the current page's :theme:.
+  const themeName = (model.get('theme') || '').trim();
+  let themeLink = document.querySelector('link[data-myst-tabulator]');
+  if (!themeLink) {
+    themeLink = document.createElement('link');
+    themeLink.rel = 'stylesheet';
+    themeLink.dataset.mystTabulator = '1';
+    document.head.appendChild(themeLink);
+  }
+  // Flag natively dark themes so the dark-mode invert filter skips them.
+  document.documentElement.toggleAttribute(
+    'data-tabulator-dark-theme', ['midnight', 'site_dark'].includes(themeName));
+  const themeUrl = themeCssUrl(themeName);
+  if (themeLink.href !== themeUrl) {
+    // Wait for the CSS before building tables: Tabulator measures rows and
+    // columns at construction time, and measuring against unstyled content
+    // bakes in a broken layout until the next full reload.
+    await new Promise((resolve) => {
+      themeLink.addEventListener('load', resolve, { once: true });
+      themeLink.addEventListener('error', resolve, { once: true });
+      setTimeout(resolve, 2000);
+      themeLink.href = themeUrl;
+    });
   }
   if (!document.querySelector('style[data-myst-tabulator]')) {
     const style = document.createElement('style');
     style.dataset.mystTabulator = '1';
-    style.textContent = FILTER_INPUT_CSS;
+    style.textContent = PLUGIN_CSS;
     document.head.appendChild(style);
   }
 
@@ -370,6 +377,7 @@ const tabulatorDirective = {
     search: { type: Boolean, doc: 'Show a single search input above the table that filters rows across every column. Synced to/from the ?tablesearch= URL parameter.' },
     copy: { type: Boolean, doc: 'Show a "Copy" button above the table that copies the visible rows to the clipboard.' },
     summary: { type: String, doc: 'Show a bottom row with a calculated value per column. One of: sum, avg, min, max, count, concat.' },
+    theme: { type: String, doc: `Tabulator stylesheet for the whole page (one theme per page). One of: ${TABULATOR_THEMES.join(', ')}. Default: simple.` },
     layout: { type: String, doc: 'Tabulator layout mode (e.g. fitColumns, fitData, fitDataFill).' },
     'no-sort': { type: Boolean, doc: 'Disable click-to-sort on column headers.' },
     'tabulator-options': {
@@ -422,6 +430,11 @@ const tabulatorDirective = {
         `tabulator: :summary: must be one of ${allowedSummary.join('|')}, got "${opts.summary}"`,
       );
     }
+    if (opts.theme && !TABULATOR_THEMES.includes(opts.theme)) {
+      vfile.message(
+        `tabulator: :theme: must be one of ${TABULATOR_THEMES.join('|')}, got "${opts.theme}"`,
+      );
+    }
 
     return [{
       type: 'anywidget',
@@ -431,6 +444,7 @@ const tabulatorDirective = {
         exclude: opts['selector-exclude'] ?? '',
         options: tabulatorOpts,
         summary: opts.summary ?? '',
+        theme: opts.theme ?? '',
         search: !!opts.search,
       },
       id: crypto.randomUUID(),
