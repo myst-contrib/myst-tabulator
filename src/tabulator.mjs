@@ -153,6 +153,49 @@ const FILTER_INPUT_CSS = `
   .myst-tab-search { padding: 0.3rem 0.5rem; }
   /* Wider padding + pointer cursor to read as a clickable button. */
   .myst-tab-copy { padding: 0.3rem 0.7rem; cursor: pointer; }
+
+  /* Dark mode: the theme toggles a "dark" class on <html>, but Tabulator's
+     simple theme is light-only. Make its surfaces transparent so the page
+     background shows through, and use translucent white overlays for
+     stripes/hover so this works on any dark background. */
+  html.dark .tabulator,
+  html.dark .tabulator .tabulator-header,
+  html.dark .tabulator .tabulator-header .tabulator-col,
+  html.dark .tabulator .tabulator-tableholder .tabulator-table,
+  html.dark .tabulator .tabulator-footer,
+  html.dark .tabulator .tabulator-footer .tabulator-paginator,
+  html.dark .tabulator-row,
+  html.dark .tabulator-row.tabulator-row-even {
+    background-color: transparent;
+    color: inherit;
+  }
+  html.dark .tabulator .tabulator-header,
+  html.dark .tabulator .tabulator-header .tabulator-col,
+  html.dark .tabulator .tabulator-footer,
+  html.dark .tabulator-row,
+  html.dark .tabulator-row .tabulator-cell {
+    border-color: #4b5563;
+  }
+  /* Calc (summary) rows use background:!important upstream, so match it. */
+  html.dark .tabulator .tabulator-tableholder .tabulator-table .tabulator-row.tabulator-calcs,
+  html.dark .tabulator .tabulator-footer .tabulator-calcs-holder,
+  html.dark .tabulator .tabulator-footer .tabulator-calcs-holder .tabulator-row {
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+  html.dark .tabulator-row.tabulator-selectable:hover,
+  html.dark .tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  html.dark .tabulator .tabulator-header-filter input,
+  html.dark .tabulator .tabulator-header-filter select,
+  html.dark .myst-tab-search,
+  html.dark .myst-tab-copy,
+  html.dark .tabulator .tabulator-footer .tabulator-page,
+  html.dark .tabulator .tabulator-footer .tabulator-page-size {
+    background: rgba(255, 255, 255, 0.08);
+    color: inherit;
+    border-color: #6b7280;
+  }
 `;
 
 async function render({ model, el }) {
