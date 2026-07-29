@@ -4,6 +4,7 @@ extends:
 project:
   id: myst-tabulator
   title: myst-tabulator
+  github: https://github.com/myst-contrib/myst-tabulator
   plugins:
     - ../src/tabulator.mjs
     - https://raw.githubusercontent.com/jupyter-book/myst-plugins/main/plugins/demo/src/index.mjs
